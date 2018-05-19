@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+<template id="opay_form" name="OPAY Form">
+    <input type="hidden" name="data_set" t-att-data-action-url="tx_url" data-remove-me=""/>
+    <input type="hidden" name="encoded" t-att-value="encoded"/>
+</template>
+
+</odoo>
