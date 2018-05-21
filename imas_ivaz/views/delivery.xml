@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- Copyright 2018 Naglis Jonaitis
+     License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
+
+<record id="view_delivery_carrier_form_inherit" model="ir.ui.view">
+    <field name="model">delivery.carrier</field>
+    <field name="inherit_id" ref="delivery.view_delivery_carrier_form"/>
+    <field name="arch" type="xml">
+
+        <field name="product_id" position="after">
+            <field name="partner_id"/>
+        </field>
+
+    </field>
+</record>
+
+</odoo>

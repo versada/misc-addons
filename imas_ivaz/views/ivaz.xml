@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- Copyright 2018 Naglis Jonaitis
+     License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
+
+<record id="view_ivaz_file_form" model="ir.ui.view">
+    <field name="name">ivaz.file.form</field>
+    <field name="model">ivaz.file</field>
+    <field name="arch" type="xml">
+        <form string="i.VAZ File">
+            <header>
+            </header>
+            <sheet>
+                <group>
+                    <group name="main">
+                        <field name="name" invisible="1"/>
+                        <field name="ivaz_file" filename="name"/>
+                        <field name="picking_id"/>
+                    </group>
+                </group>
+            </sheet>
+        </form>
+    </field>
+</record>
+
+<record id="view_ivaz_file_tree" model="ir.ui.view">
+    <field name="name">ivaz.file.tree</field>
+    <field name="model">ivaz.file</field>
+    <field name="arch" type="xml">
+        <tree>
+            <field name="name"/>
+            <field name="picking_id"/>
+        </tree>
+    </field>
+</record>
+
+<record id="action_ivaz_files" model="ir.actions.act_window">
+    <field name="name">i.VAZ Files</field>
+    <field name="res_model">ivaz.file</field>
+    <field name="view_mode">tree,form</field>
+</record>
+
+<menuitem id="ivaz_menu_root"
+    name="i.VAZ"
+    parent="base_imas.imas_menu_root"
+/>
+<menuitem id="ivaz_menu_files"
+    name="i.VAZ Files"
+    action="action_ivaz_files"
+    parent="ivaz_menu_root"
+/>
+
+</odoo>

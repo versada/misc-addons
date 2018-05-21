@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- Copyright 2018 Naglis Jonaitis
+     License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
+
+<!-- ROOT MENU -->
+<menuitem id="imas_menu_root"
+    name="i.MAS"
+    web_icon="base_imas,static/description/icon.png"
+    sequence="41"/>
+
+<menuitem id="imas_menu_configuration_root"
+    name="Configuration"
+    groups="base.group_system,base_imas.group_imas_manager"
+    parent="imas_menu_root"
+    sequence="100"
+/>
+
+<record id="view_imas_client_cert_form" model="ir.ui.view">
+    <field name="name">imas.client.cert.form</field>
+    <field name="model">imas.client.cert</field>
+    <field name="arch" type="xml">
+        <form string="i.MAS Client Certificate">
+            <sheet>
+                <group>
+                    <group name="general">
+                        <field name="active"/>
+                        <field name="name"/>
+                        <field name="company_id"/>
+                    </group>
+                    <group name="cert" groups="base.group_system">
+                        <field name="private_key_file"/>
+                        <field name="password" password="True"/>
+                        <field name="is_protected"/>
+                        <field name="certificate_file"/>
+                    </group>
+                </group>
+            </sheet>
+        </form>
+    </field>
+</record>
+
+<record id="view_imas_client_cert_tree" model="ir.ui.view">
+    <field name="name">imas.client.cert.tree</field>
+    <field name="model">imas.client.cert</field>
+    <field name="arch" type="xml">
+        <tree>
+            <field name="name"/>
+            <field name="company_id"/>
+            <field name="active" widget="boolean_toggle"/>
+        </tree>
+    </field>
+</record>
+
+<record id="action_client_certificates" model="ir.actions.act_window">
+    <field name="name">Client Certificates</field>
+    <field name="res_model">imas.client.cert</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+        <p class="oe_view_nocontent_create">
+            Click to add a new client certificate file.
+        </p>
+    </field>
+</record>
+
+<menuitem id="menu_client_certificates"
+    name="Client Certificates"
+    action="action_client_certificates"
+    parent="imas_menu_configuration_root"
+/>
+
+</odoo>

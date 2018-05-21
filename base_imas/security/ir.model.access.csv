@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_imas_client_cert_imas_user,i.MAS Client Certificate (i.MAS User),model_imas_client_cert,base_imas.group_imas_user,1,0,0,0
+access_imas_client_cert_system,i.MAS Client Certificate (Administrative User),model_imas_client_cert,base.group_system,1,1,1,1

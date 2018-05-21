@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ivaz_transport_mean_imas_user,i.VAZ Means Of Transport (i.MAS User),model_ivaz_transport_mean,base_imas.group_imas_user,1,1,1,1
+access_ivaz_transport_mean_seal_imas_user,i.VAZ Transport Mean Seal (i.MAS User),model_ivaz_transport_mean_seal,base_imas.group_imas_user,1,1,1,1
+access_ivaz_file_imas_user,i.VAZ File (i.MAS User),model_ivaz_file,base_imas.group_imas_user,1,1,1,0
+access_ivaz_file_imas_manager,i.VAZ File (i.MAS Manager),model_ivaz_file,base_imas.group_imas_manager,1,1,1,1

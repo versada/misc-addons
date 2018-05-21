@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- Copyright 2018 Naglis Jonaitis
+     License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
+
+<record id="view_picking_form_inherit" model="ir.ui.view">
+    <field name="model">stock.picking</field>
+    <field name="inherit_id" ref="stock.view_picking_form"/>
+    <field name="arch" type="xml">
+
+        <xpath expr="//header" position="inside">
+            <button name="action_generate_ivaz" attrs="{'invisible': [('state', 'in', ('done',))]}" string="Generate i.VAZ" type="object" groups="base_imas.group_imas_user"/>
+        </xpath>
+
+        <xpath expr="//div[@name='button_box']" position="inside">
+            <button name="action_see_ivaz_files" type="object" class="oe_stat_button" icon="fa-file" attrs="{'invisible': [('ivaz_file_count', '=', 0)]}">
+                <field name="ivaz_file_count" widget="statinfo" string="i.VAZ"/>
+            </button>
+        </xpath>
+
+        <field name="scheduled_date" position="after">
+            <field name="time_of_dispatch"/>
+            <field name="eta"/>
+        </field>
+
+        <field name="carrier_id" position="before">
+            <field name="use_delivery_carrier"/>
+        </field>
+
+        <page name="extra" position="after">
+            <page string="Vehicles" name="ivaz_vehicles" accesskey="v" groups="base_imas.group_imas_user">
+                <field name="transport_mean_ids" context="{'default_picking_id': active_id}">
+                    <tree>
+                        <field name="vehicle_model_id"/>
+                        <field name="license_plate"/>
+                        <field name="seal_ids" widget="many2many_tags"/>
+                    </tree>
+                    <form>
+                        <group>
+                            <group name="vehicle" string="Vehicle">
+                                <field name="picking_id" invisible="1"/>
+                                <field name="use_delivery_carrier" invisible="1"/>
+                                <field name="vehicle_id" attrs="{'invisible': [('use_delivery_carrier', '=', True)]}"/>
+                                <field name="vehicle_model_id"/>
+                                <field name="license_plate"/>
+                            </group>
+                        </group>
+                        <group name="seals" string="Seals">
+                            <field name="seal_ids" nolabel="1">
+                                <tree editable="bottom">
+                                    <field name="name"/>
+                                    <field name="description"/>
+                                </tree>
+                            </field>
+                        </group>
+                        <!-- TODO: Drivers -->
+                    </form>
+                </field>
+            </page>
+        </page>
+
+    </field>
+</record>
+
+</odoo>
