@@ -1,4 +1,5 @@
 # Copyright 2018 Naglis Jonaitis
+#           2020 Versada UAB
 # License AGPL-3 or later (https://www.gnu.org/licenses/agpl).
 
 import datetime
@@ -7,7 +8,9 @@ import lxml.etree as ET
 
 from odoo import api, fields, models
 
-from ..const import IVAZ_XML_NAMESPACE
+from ..const import IVAZ_XML_DOCTYPE, IVAZ_XML_ENCODING, IVAZ_XML_NAMESPACE
+from ..exceptions import iVAZException
+
 
 PARTNER_ADDRESS_FIELDS = (
     'street',
@@ -34,7 +37,7 @@ def str_el(tag, value, attrib=None, max_length=None, nsmap=None, **extra):
 def float_el(tag, value, total_digits=None, fraction_digits=None, attrib=None,
              nsmap=None, **extra):
     if total_digits is not None and not value < total_digits ** 10:
-        raise ValueError('Value for tag: %s is too large' % tag)
+        raise iVAZException('Value for tag: %s is too large' % tag)
     if fraction_digits is not None:
         value = ('{value:.%df}' % fraction_digits).format(value=value)
     return str_el(tag, value, attrib=attrib, nsmap=nsmap, **extra)
@@ -42,7 +45,7 @@ def float_el(tag, value, total_digits=None, fraction_digits=None, attrib=None,
 
 def int_el(tag, value, total_digits=None, attrib=None, nsmap=None, **extra):
     if total_digits is not None and not value < total_digits ** 10:
-        raise ValueError('Value for tag: %s is too large' % tag)
+        raise iVAZException('Value for tag: %s is too large' % tag)
     return str_el(tag, value, attrib=attrib, nsmap=nsmap, **extra)
 
 
@@ -106,8 +109,7 @@ class IVAZRenderer(models.AbstractModel):
             el.append(str_el('EstimatedTimeOfArrival', eta_dt.isoformat()))
 
         el.append(
-            self.render_actor(
-                'Consignor', picking.company_id, is_company=True))
+            self.render_actor('Consignor', picking.company_id))
         el.append(self.render_actor('Consignee', picking.partner_id))
 
         el.append(self.render_transporter(picking))
@@ -219,7 +221,8 @@ class IVAZRenderer(models.AbstractModel):
         return el
 
     @api.model
-    def render_actor(self, tag, actor, is_company=False, is_transporter=False):
+    def render_actor(self, tag, actor, is_transporter=False):
+        is_company = actor._name == 'res.company'
         el = ET.Element(tag)
         el.append(str_el(
             'RegistrationNumber',
@@ -250,14 +253,11 @@ class IVAZRenderer(models.AbstractModel):
 
     @api.model
     def render_transporter(self, picking):
-        if picking.use_delivery_carrier:
-            el = self.render_actor(
-                'Transporter', picking.carrier_id.partner_id,
-                is_transporter=True)
-        else:
-            el = self.render_actor(
-                'Transporter', picking.company_id, is_company=True,
-                is_transporter=True)
+        el = self.render_actor(
+            'Transporter',
+            picking._get_ivaz_transporter_actor(),
+            is_transporter=True,
+        )
 
         means_el = ET.SubElement(el, 'TransportMeans')
         for mean in picking.transport_mean_ids:
@@ -313,4 +313,10 @@ class IVAZRenderer(models.AbstractModel):
         root = ET.Element('iVAZFile', nsmap=self.get_ns_map())
         root.append(self.render_file_description(pickings[:1].company_id))
         root.append(self.render_transport_documents(pickings))
-        return ET.tostring(root, pretty_print=True)
+        return ET.tostring(
+            root,
+            encoding=IVAZ_XML_ENCODING,
+            xml_declaration=True,
+            pretty_print=True,
+            doctype=IVAZ_XML_DOCTYPE,
+        )

@@ -1,4 +1,5 @@
 # Copyright 2018 Naglis Jonaitis
+#           2020 Versada UAB
 # License AGPL-3 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
@@ -43,6 +44,17 @@ class StockPicking(models.Model):
         for record in self:
             record.ivaz_file_count = len(record.ivaz_file_ids)
 
+    def _get_ivaz_transporter_actor(self):
+        '''
+        Return the i.VAZ transporter actor (`res.partner` or `res.company`) for
+        this picking.
+        '''
+        self.ensure_one()
+        if self.use_delivery_carrier:
+            return self.carrier_id.partner_id
+        else:
+            return self.company_id
+
     @api.multi
     def action_see_ivaz_files(self):
         self.ensure_one()
@@ -64,11 +76,10 @@ class StockPicking(models.Model):
     def action_generate_ivaz(self):
         self.ensure_one()
         validator = self.env['imas.ivaz.validator']
-        validator.validate_picking(self)
+        validator._validate_picking(self)
         ivaz_xml = self.env['imas.ivaz.renderer'].from_pickings(self)
-        print(ivaz_xml.decode('utf-8'))
         ivaz_tree = ET.fromstring(ivaz_xml)
-        validator.validate_with_xsd(ivaz_tree)
+        validator._validate_with_xsd(ivaz_tree)
         ivaz_file = self.env['ivaz.file'].create({
             'ivaz_file': base64.b64encode(ivaz_xml),
             'picking_id': self.id,
