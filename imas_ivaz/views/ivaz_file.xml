@@ -2,15 +2,14 @@
 <odoo>
 
 <!-- Copyright 2018 Naglis Jonaitis
+               2020 Versada UAB
      License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
 
-<record id="view_ivaz_file_form" model="ir.ui.view">
+<record id="ivaz_file_view_form" model="ir.ui.view">
     <field name="name">ivaz.file.form</field>
     <field name="model">ivaz.file</field>
     <field name="arch" type="xml">
-        <form string="i.VAZ File">
-            <header>
-            </header>
+        <form>
             <sheet>
                 <group>
                     <group name="main">
@@ -24,7 +23,7 @@
     </field>
 </record>
 
-<record id="view_ivaz_file_tree" model="ir.ui.view">
+<record id="ivaz_file_view_tree" model="ir.ui.view">
     <field name="name">ivaz.file.tree</field>
     <field name="model">ivaz.file</field>
     <field name="arch" type="xml">
@@ -35,7 +34,7 @@
     </field>
 </record>
 
-<record id="action_ivaz_files" model="ir.actions.act_window">
+<record id="ivaz_file_action" model="ir.actions.act_window">
     <field name="name">i.VAZ Files</field>
     <field name="res_model">ivaz.file</field>
     <field name="view_mode">tree,form</field>
@@ -45,9 +44,8 @@
     name="i.VAZ"
     parent="base_imas.imas_menu_root"
 />
-<menuitem id="ivaz_menu_files"
-    name="i.VAZ Files"
-    action="action_ivaz_files"
+<menuitem id="ivaz_file_menu"
+    action="ivaz_file_action"
     parent="ivaz_menu_root"
 />
 

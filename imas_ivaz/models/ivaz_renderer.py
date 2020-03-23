@@ -5,6 +5,7 @@
 import datetime
 
 import lxml.etree as ET
+import pytz
 
 from odoo import api, fields, models
 
@@ -49,25 +50,28 @@ def int_el(tag, value, total_digits=None, attrib=None, nsmap=None, **extra):
     return str_el(tag, value, attrib=attrib, nsmap=nsmap, **extra)
 
 
+def datetime_el(tag, value, attrib=None, nsmap=None, **extra):
+    aware = value.replace(microsecond=0, tzinfo=pytz.UTC)
+    return str_el(tag, aware.isoformat(), attrib=attrib, nsmap=nsmap, **extra)
+
+
 class IVAZRenderer(models.AbstractModel):
     _name = 'imas.ivaz.renderer'
     _description = 'i.VAZ XML Renderer (abstract)'
     _ivaz_version = 'iVAZ1.3.3'
 
-    @api.model
-    def get_ns_map(self):
+    def _get_ns_map(self):
         '''Returns the namespace mapping used for rendering the i.VAZ XML.'''
         return {
             None: IVAZ_XML_NAMESPACE,
         }
 
-    @api.model
-    def render_file_description(self, company, date_created=None):
+    def _render_file_description(self, company, date_created=None):
         date_created = (date_created or datetime.datetime.now()).replace(
             microsecond=0)
         fd = ET.Element('FileDescription')
         fd.append(str_el('FileVersion', self._ivaz_version, max_length=24))
-        fd.append(str_el('FileDateCreated', date_created.isoformat()))
+        fd.append(datetime_el('FileDateCreated', date_created))
         fd.append(str_el(
             'SoftwareCompanyName',
             'Naglis Jonaitis',
@@ -79,15 +83,13 @@ class IVAZRenderer(models.AbstractModel):
             'CreatorRegistrationNumber', company.company_registry))
         return fd
 
-    @api.model
-    def render_transport_documents(self, pickings):
+    def _render_transport_documents(self, pickings):
         el = ET.Element('TransportDocuments')
         for picking in pickings:
-            el.append(self.render_transport_document(picking))
+            el.append(self._render_transport_document(picking))
         return el
 
-    @api.model
-    def render_transport_document(self, picking):
+    def _render_transport_document(self, picking):
         el = ET.Element('TransportDocument')
         uid_el = ET.SubElement(el, 'TransportDocumentUID')
         uid_el.append(str_el(
@@ -99,46 +101,54 @@ class IVAZRenderer(models.AbstractModel):
             el.append(str_el(
                 'LocalTransportDocumentDate', doc_date.isoformat()))
         poi_el = ET.SubElement(el, 'PlaceOfIssueTransportDocument')
-        poi_el.append(self.render_address(picking.company_id.partner_id))
+        poi_el.append(self._render_address(picking.company_id.partner_id))
 
         dispatch_dt = fields.Datetime.from_string(picking.time_of_dispatch)
-        el.append(str_el('TimeOfDispatch', dispatch_dt.isoformat()))
+        el.append(datetime_el('TimeOfDispatch', dispatch_dt))
 
         if picking.eta:
             eta_dt = fields.Datetime.from_string(picking.eta)
-            el.append(str_el('EstimatedTimeOfArrival', eta_dt.isoformat()))
+            el.append(datetime_el('EstimatedTimeOfArrival', eta_dt))
 
         el.append(
-            self.render_actor('Consignor', picking.company_id))
-        el.append(self.render_actor('Consignee', picking.partner_id))
+            self._render_actor('Consignor', picking.company_id))
+        el.append(self._render_actor('Consignee', picking.partner_id))
 
-        el.append(self.render_transporter(picking))
+        el.append(self._render_transporter(picking))
 
         wh = picking.picking_type_id.warehouse_id
         ship_from_el = ET.SubElement(el, 'ShipFrom')
         ship_from_el.append(str_el('WarehouseID', wh.code, max_length=24))
         load_addr_el = ET.SubElement(ship_from_el, 'LoadAddress')
-        load_addr_el.append(self.render_address(wh.partner_id))
-        # XXX: ImportCustomOffice?
+        load_addr_el.append(self._render_address(wh.partner_id))
+        if picking.import_custom_office:
+            ship_from_el.append(str_el(
+                'ImportCustomOffice',
+                picking.import_custom_office,
+                max_length=10,
+            ))
 
         ship_to_el = ET.SubElement(el, 'ShipTo')
         # XXX: Warehouse?
         # ship_to_el.append(str_el('WarehouseID', wh.code))
         unload_addr_el = ET.SubElement(ship_to_el, 'UnloadAddress')
-        unload_addr_el.append(self.render_address(picking.partner_id))
-        # XXX: ExportCustomOffice?
+        unload_addr_el.append(self._render_address(picking.partner_id))
+        if picking.export_custom_office:
+            ship_to_el.append(str_el(
+                'ExportCustomOffice',
+                picking.export_custom_office,
+                max_length=10,
+            ))
 
-        el.append(self.render_delivery_data(picking))
+        el.append(self._render_delivery_data(picking))
 
         # TODO: ComplementaryTransportInformation
 
         return el
 
-    @api.model
-    def render_product(self, line_no, move_line):
+    def _render_product(self, line_no, move_line):
         el = ET.Element('Product')
         el.append(int_el('ProductLineNumber', line_no, total_digits=3))
-        # TODO: Is quantity_done ok to use here?
         el.append(float_el(
             'Quantity',
             move_line.quantity_done, total_digits=10, fraction_digits=3,
@@ -150,7 +160,6 @@ class IVAZRenderer(models.AbstractModel):
         if product.default_code:
             el.append(str_el(
                 'ProductCode', product.default_code, max_length=70))
-        # FIXME: Is this code ok to use here?
         if product.hs_code:
             el.append(str_el(
                 'AdditionalProductCode', product.hs_code, max_length=70))
@@ -159,26 +168,31 @@ class IVAZRenderer(models.AbstractModel):
             'ProductDescription', product.name, max_length=350))
         return el
 
-    @api.model
-    def render_delivery_data(self, picking):
+    def _render_delivery_data(self, picking):
         el = ET.Element('DeliveryData')
         products_el = ET.SubElement(el, 'Products')
         for idx, move in enumerate(picking.move_lines, start=1):
-            products_el.append(self.render_product(idx, move))
+            products_el.append(self._render_product(idx, move))
         if picking.package_ids:
             packages_el = ET.SubElement(el, 'Packages')
             for package in picking.package_ids:
-                packages_el.append(self.render_package(picking, package))
-        el.append(self.render_weight(picking))
+                packages_el.append(self._render_package(picking, package))
+        el.append(self._render_weight(picking))
 
         # TODO: ClassesAndNumbers
         # XXX: Should classes and numbers be defined on products or on the
         # picking?
 
-        # TODO: Value
-        # XXX: Where to take the value from?
+        el.append(float_el(
+            'Value',
+            picking._get_ivaz_value(),
+            total_digits=18,
+            fraction_digits=2,
+        ))
 
-        # TODO: Currency
+        currency = picking._get_ivaz_currency()
+        if currency:
+            el.append(str_el('Currency', currency.name, max_length=3))
 
         # TODO: ComplementaryDeliveryInformation
         # XXX: Ok to use `note` here?
@@ -190,8 +204,7 @@ class IVAZRenderer(models.AbstractModel):
 
         return el
 
-    @api.model
-    def render_weight(self, picking):
+    def _render_weight(self, picking):
         el = ET.Element('Weight')
         el.append(float_el(
             'GrossWeight',
@@ -209,19 +222,16 @@ class IVAZRenderer(models.AbstractModel):
             'UnitOfMeasure', picking.weight_uom_id.name, max_length=10))
         return el
 
-    @api.model
-    def render_package(self, picking, package):
+    def _render_package(self, picking, package):
         el = ET.Element('Package')
         el.append(str_el(
             'KindOfPackagesCode', package.packaging_id.name, max_length=24))
         el.append(str_el('PackagesID', package.name, max_length=256))
-        # FIXME: Is this correct?
         el.append(str_el('NumberOfPackages', 1))
         # FIXME: Seals?
         return el
 
-    @api.model
-    def render_actor(self, tag, actor, is_transporter=False):
+    def _render_actor(self, tag, actor, is_transporter=False):
         is_company = actor._name == 'res.company'
         el = ET.Element(tag)
         el.append(str_el(
@@ -238,7 +248,7 @@ class IVAZRenderer(models.AbstractModel):
         ))
         addr_el = ET.SubElement(
             el, 'TransporterAddress' if is_transporter else 'Address')
-        addr_el.append(self.render_address(actor_partner))
+        addr_el.append(self._render_address(actor_partner))
 
         contact_info = [
             actor_partner[f]
@@ -251,9 +261,8 @@ class IVAZRenderer(models.AbstractModel):
 
         return el
 
-    @api.model
-    def render_transporter(self, picking):
-        el = self.render_actor(
+    def _render_transporter(self, picking):
+        el = self._render_actor(
             'Transporter',
             picking._get_ivaz_transporter_actor(),
             is_transporter=True,
@@ -261,11 +270,10 @@ class IVAZRenderer(models.AbstractModel):
 
         means_el = ET.SubElement(el, 'TransportMeans')
         for mean in picking.transport_mean_ids:
-            means_el.append(self.render_mean(mean))
+            means_el.append(self._render_transport_mean(mean))
         return el
 
-    @api.model
-    def render_mean(self, mean):
+    def _render_transport_mean(self, mean):
         el = ET.Element('TransportMean')
         el.append(str_el(
             'IdentityOfTransportUnits', mean.license_plate, max_length=10))
@@ -289,8 +297,7 @@ class IVAZRenderer(models.AbstractModel):
                         'SealInformation', seal.description, max_length=256))
         return el
 
-    @api.model
-    def render_address(self, partner):
+    def _render_address(self, partner):
         '''
         Returns address tag from `res.partner`.
 
@@ -309,10 +316,11 @@ class IVAZRenderer(models.AbstractModel):
             max_length=256,
         )
 
+    @api.model
     def from_pickings(self, pickings):
-        root = ET.Element('iVAZFile', nsmap=self.get_ns_map())
-        root.append(self.render_file_description(pickings[:1].company_id))
-        root.append(self.render_transport_documents(pickings))
+        root = ET.Element('iVAZFile', nsmap=self._get_ns_map())
+        root.append(self._render_file_description(pickings[:1].company_id))
+        root.append(self._render_transport_documents(pickings))
         return ET.tostring(
             root,
             encoding=IVAZ_XML_ENCODING,

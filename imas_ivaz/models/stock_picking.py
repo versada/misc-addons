@@ -20,6 +20,12 @@ class StockPicking(models.Model):
     time_of_dispatch = fields.Datetime(
         string='Time of Dispatch',
     )
+    import_custom_office = fields.Char(
+        string='Import Customs Office Code',
+    )
+    export_custom_office = fields.Char(
+        string='Export Customs Office Code',
+    )
     eta = fields.Datetime(
         string='Estimated Time of Arrival',
     )
@@ -54,6 +60,15 @@ class StockPicking(models.Model):
             return self.carrier_id.partner_id
         else:
             return self.company_id
+
+    def _get_ivaz_value(self):
+        return sum(
+            move.price_unit * move.quantity_done
+            for move in self.ensure_one().move_lines
+        )
+
+    def _get_ivaz_currency(self):
+        return self.ensure_one().company_id.currency_id
 
     @api.multi
     def action_see_ivaz_files(self):

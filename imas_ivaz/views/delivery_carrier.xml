@@ -2,9 +2,10 @@
 <odoo>
 
 <!-- Copyright 2018 Naglis Jonaitis
+               2020 Versada UAB
      License AGPL-3 or later (https://www.gnu.org/licenses/agpl). -->
 
-<record id="view_delivery_carrier_form_inherit" model="ir.ui.view">
+<record id="view_delivery_carrier_form" model="ir.ui.view">
     <field name="model">delivery.carrier</field>
     <field name="inherit_id" ref="delivery.view_delivery_carrier_form"/>
     <field name="arch" type="xml">

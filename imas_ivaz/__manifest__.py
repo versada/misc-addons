@@ -15,12 +15,9 @@
     ],
     'data': [
         'security/ir.model.access.csv',
-        'data/ir.xml',
-        'views/delivery.xml',
-        'views/ivaz.xml',
-        'views/stock.xml',
-    ],
-    'images': [
+        'views/delivery_carrier.xml',
+        'views/ivaz_file.xml',
+        'views/stock_picking.xml',
     ],
     'installable': True,
 }
