@@ -50,9 +50,14 @@ def int_el(tag, value, total_digits=None, attrib=None, nsmap=None, **extra):
     return str_el(tag, value, attrib=attrib, nsmap=nsmap, **extra)
 
 
-def datetime_el(tag, value, attrib=None, nsmap=None, **extra):
-    aware = value.replace(microsecond=0, tzinfo=pytz.UTC)
-    return str_el(tag, aware.isoformat(), attrib=attrib, nsmap=nsmap, **extra)
+def datetime_el(tag, value, tz, attrib=None, nsmap=None, **extra):
+    """
+    Given a naive datetime in UTC (`value`), convert it to `tz` timezone,
+    remove microseconds part and format as ISO 8601 string.
+    """
+    dt = value.replace(microsecond=0)
+    dt_tz = pytz.UTC.localize(dt).astimezone(pytz.timezone(tz or 'UTC'))
+    return str_el(tag, dt_tz.isoformat(), attrib=attrib, nsmap=nsmap, **extra)
 
 
 class IVAZRenderer(models.AbstractModel):
@@ -71,7 +76,8 @@ class IVAZRenderer(models.AbstractModel):
             microsecond=0)
         fd = ET.Element('FileDescription')
         fd.append(str_el('FileVersion', self._ivaz_version, max_length=24))
-        fd.append(datetime_el('FileDateCreated', date_created))
+        fd.append(
+            datetime_el('FileDateCreated', date_created, self.env.user.tz))
         fd.append(str_el(
             'SoftwareCompanyName',
             'Naglis Jonaitis',
@@ -90,6 +96,7 @@ class IVAZRenderer(models.AbstractModel):
         return el
 
     def _render_transport_document(self, picking):
+        tz = self.env.user.tz
         el = ET.Element('TransportDocument')
         uid_el = ET.SubElement(el, 'TransportDocumentUID')
         uid_el.append(str_el(
@@ -104,11 +111,11 @@ class IVAZRenderer(models.AbstractModel):
         poi_el.append(self._render_address(picking.company_id.partner_id))
 
         dispatch_dt = fields.Datetime.from_string(picking.time_of_dispatch)
-        el.append(datetime_el('TimeOfDispatch', dispatch_dt))
+        el.append(datetime_el('TimeOfDispatch', dispatch_dt, tz))
 
         if picking.eta:
             eta_dt = fields.Datetime.from_string(picking.eta)
-            el.append(datetime_el('EstimatedTimeOfArrival', eta_dt))
+            el.append(datetime_el('EstimatedTimeOfArrival', eta_dt, tz))
 
         el.append(
             self._render_actor('Consignor', picking.company_id))
